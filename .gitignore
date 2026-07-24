@@ -35,3 +35,13 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Variables y configuración local con secretos
+.env
+.env.*
+!.env.example
+Ariscend_back/src/main/resources/application-local.properties
+
+# Logs
+*.log
+hs_err_pid*
