@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class HabitCompletionResponse {
 
     private Long id;
+    private Long habitId;
     private LocalDate completedDate;
     private LocalDateTime completedAt;
     private String notes;
@@ -16,6 +17,7 @@ public class HabitCompletionResponse {
         HabitCompletionResponse response = new HabitCompletionResponse();
 
         response.id = completion.getId();
+        response.habitId = completion.getHabit().getId();
         response.completedDate = completion.getCompletedDate();
         response.completedAt = completion.getCompletedAt();
         response.notes = completion.getNotes();
@@ -29,6 +31,10 @@ public class HabitCompletionResponse {
 
     public LocalDate getCompletedDate() {
         return completedDate;
+    }
+
+    public Long getHabitId() {
+        return habitId;
     }
 
     public LocalDateTime getCompletedAt() {

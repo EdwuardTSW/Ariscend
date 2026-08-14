@@ -19,17 +19,36 @@ export async function apiRequest<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`/backend${path}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 12_000);
+  const abortFromCaller = () => controller.abort();
+  init.signal?.addEventListener("abort", abortFromCaller, { once: true });
+
+  let response: Response;
+  try {
+    response = await fetch(`/backend${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    if (controller.signal.aborted) {
+      throw new ApiError("La solicitud tardó demasiado. Revisa tu conexión e intenta nuevamente.", 408);
+    }
+    throw new ApiError("No se pudo conectar con el servidor.", 0);
+  } finally {
+    window.clearTimeout(timeout);
+    init.signal?.removeEventListener("abort", abortFromCaller);
+  }
 
   if (!response.ok) {
-    let message = "No se pudo completar la operación.";
+    let message = response.status >= 500
+      ? "El servidor no pudo completar la solicitud. Intenta nuevamente."
+      : "No se pudo completar la operación.";
     try {
       const body = (await response.json()) as ApiErrorBody;
-      if (body.message) message = body.message;
+      if (body.message && response.status < 500) message = body.message;
     } catch {
       // Keep the fallback when the server did not return JSON.
     }

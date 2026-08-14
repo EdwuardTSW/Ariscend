@@ -1,2 +1,2 @@
-import { FinanceOverview } from "@/components/finance/finance-overview";
-export default function Page() { return <FinanceOverview />; }
+import { FinanceWorkspace } from "@/components/finance/finance-workspace";
+export default function Page() { return <FinanceWorkspace />; }

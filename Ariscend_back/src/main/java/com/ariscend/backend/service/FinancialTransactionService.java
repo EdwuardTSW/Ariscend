@@ -23,6 +23,7 @@ import com.ariscend.backend.repository.TransactionCategoryRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,8 +68,24 @@ public class FinancialTransactionService {
         validateDates(dateFrom, dateTo); validatePagination(page, size);
         String normalizedCurrency = currency == null || currency.isBlank() ? null : FinanceUtils.normalizeCurrency(currency);
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("id")));
-        Page<FinancialTransactionResponse> result = transactionRepository.findByFilters(userId, type, categoryId,
-                cardId, normalizedCurrency, dateFrom, dateTo, status, pageable).map(FinancialTransactionResponse::from);
+        Specification<FinancialTransaction> filters = (root, query, builder) ->
+                builder.equal(root.get("user").get("id"), userId);
+        if (type != null) filters = filters.and((root, query, builder) -> builder.equal(root.get("type"), type));
+        if (categoryId != null) filters = filters.and((root, query, builder) ->
+                builder.equal(root.get("category").get("id"), categoryId));
+        if (cardId != null) filters = filters.and((root, query, builder) -> builder.or(
+                builder.equal(root.get("card").get("id"), cardId),
+                builder.equal(root.get("paidCreditCard").get("id"), cardId)
+        ));
+        if (normalizedCurrency != null) filters = filters.and((root, query, builder) ->
+                builder.equal(root.get("currency"), normalizedCurrency));
+        if (dateFrom != null) filters = filters.and((root, query, builder) ->
+                builder.greaterThanOrEqualTo(root.get("transactionDate"), dateFrom));
+        if (dateTo != null) filters = filters.and((root, query, builder) ->
+                builder.lessThanOrEqualTo(root.get("transactionDate"), dateTo));
+        if (status != null) filters = filters.and((root, query, builder) -> builder.equal(root.get("status"), status));
+        Page<FinancialTransactionResponse> result = transactionRepository.findAll(filters, pageable)
+                .map(FinancialTransactionResponse::from);
         return PagedResponse.from(result);
     }
 
@@ -78,7 +95,7 @@ public class FinancialTransactionService {
 
     @Transactional
     public FinancialTransactionResponse update(Long userId, Long transactionId, UpdateFinancialTransactionRequest request) {
-        FinancialTransaction transaction = findOwned(userId, transactionId);
+        FinancialTransaction transaction = findOwnedForUpdate(userId, transactionId);
         if (transaction.getStatus() == FinancialStatus.CANCELLED) throw new IllegalStateException("El movimiento está cancelado.");
         if (transaction.isGoalGenerated()) throw new IllegalStateException("Los movimientos de metas se administran desde la meta.");
         TransactionImpact previousImpact = TransactionImpact.from(transaction);
@@ -89,7 +106,7 @@ public class FinancialTransactionService {
 
     @Transactional
     public void cancel(Long userId, Long transactionId) {
-        FinancialTransaction transaction = findOwned(userId, transactionId);
+        FinancialTransaction transaction = findOwnedForUpdate(userId, transactionId);
         if (transaction.isGoalGenerated()) throw new IllegalStateException("Los movimientos de metas se administran desde la meta.");
         if (transaction.getStatus() == FinancialStatus.ACTIVE) validateCancellation(userId, transaction);
         cancelEntity(transaction);
@@ -199,6 +216,10 @@ public class FinancialTransactionService {
     }
     private FinancialTransaction findOwned(Long userId, Long transactionId) {
         return transactionRepository.findByIdAndUserId(transactionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Movimiento no encontrado."));
+    }
+    private FinancialTransaction findOwnedForUpdate(Long userId, Long transactionId) {
+        return transactionRepository.findOwnedForUpdate(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Movimiento no encontrado."));
     }
     private void cancelEntity(FinancialTransaction transaction) {
@@ -330,17 +351,16 @@ public class FinancialTransactionService {
             Map<Long, BigDecimal> limits
     ) {
         if (card == null || balances.containsKey(card.getId())) return;
-        balances.put(
-                card.getId(),
-                card.getType() == CardType.DEBIT ? debitBalance(card) : BigDecimal.ZERO
-        );
-        expenses.put(card.getId(), card.getType() == CardType.CREDIT
-                ? value(transactionRepository.sumActiveByCardAndType(card.getId(), TransactionType.EXPENSE))
-                : BigDecimal.ZERO);
-        payments.put(card.getId(), card.getType() == CardType.CREDIT
-                ? value(transactionRepository.sumActivePaymentsToCard(card.getId()))
-                : BigDecimal.ZERO);
-        limits.put(card.getId(), card.getType() == CardType.CREDIT ? card.getCreditLimit() : BigDecimal.ZERO);
+        if (card.getType() == CardType.DEBIT) {
+            balances.put(card.getId(), debitBalance(card));
+            return;
+        }
+        balances.put(card.getId(), BigDecimal.ZERO);
+        expenses.put(card.getId(), value(transactionRepository.sumActiveByCardAndType(
+                card.getId(), TransactionType.EXPENSE
+        )));
+        payments.put(card.getId(), value(transactionRepository.sumActivePaymentsToCard(card.getId())));
+        limits.put(card.getId(), card.getCreditLimit());
     }
 
     private record TransactionImpact(

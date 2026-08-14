@@ -1,5 +1,8 @@
 package com.ariscend.backend.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,6 +18,8 @@ import java.util.Objects;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleNotFound(ResourceNotFoundException exception) {
@@ -65,5 +70,19 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleDataConflict() {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("message", "La operación entra en conflicto con datos existentes."));
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<Map<String, String>> handleDataAccess(DataAccessException exception) {
+        LOGGER.error("Database operation failed", exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "No se pudieron consultar los datos. Intenta nuevamente."));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleUnexpected(Exception exception) {
+        LOGGER.error("Unexpected request failure", exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Ocurrió un error interno. Intenta nuevamente."));
     }
 }

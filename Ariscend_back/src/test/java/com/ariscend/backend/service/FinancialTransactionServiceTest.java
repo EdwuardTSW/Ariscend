@@ -108,14 +108,14 @@ class FinancialTransactionServiceTest {
         when(transactionRepository.findByIdAndUserId(9L, 2L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> service.getById(2L, 9L));
         verify(transactionRepository, never()).save(any());
-        verify(transactionRepository, never()).delete(any());
+        verify(transactionRepository, never()).delete(any(FinancialTransaction.class));
     }
 
     @Test
     void cancelCreditExpenseRejectsPaymentsAboveRemainingPurchases() {
         AppUser user = user(); Card card = creditCard(user);
         FinancialTransaction transaction = movement(user, card, TransactionType.EXPENSE, "500.00");
-        when(transactionRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.findOwnedForUpdate(9L, USER_ID)).thenReturn(Optional.of(transaction));
         when(cardRepository.findOwnedForUpdate(4L, USER_ID)).thenReturn(Optional.of(card));
         when(transactionRepository.sumActiveByCardAndType(4L, TransactionType.EXPENSE)).thenReturn(new BigDecimal("500.00"));
         when(transactionRepository.sumActivePaymentsToCard(4L)).thenReturn(new BigDecimal("300.00"));
@@ -130,7 +130,7 @@ class FinancialTransactionServiceTest {
         AppUser user = user(); Card card = creditCard(user);
         FinancialTransaction transaction = movement(user, null, TransactionType.CREDIT_CARD_PAYMENT, "300.00");
         transaction.setPaidCreditCard(card);
-        when(transactionRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.findOwnedForUpdate(9L, USER_ID)).thenReturn(Optional.of(transaction));
         when(cardRepository.findOwnedForUpdate(4L, USER_ID)).thenReturn(Optional.of(card));
         when(transactionRepository.sumActiveByCardAndType(4L, TransactionType.EXPENSE)).thenReturn(new BigDecimal("1200.00"));
         when(transactionRepository.sumActivePaymentsToCard(4L)).thenReturn(new BigDecimal("300.00"));
@@ -145,7 +145,7 @@ class FinancialTransactionServiceTest {
         AppUser user = user(); Card card = creditCard(user); TransactionCategory category = category(CategoryType.EXPENSE);
         FinancialTransaction transaction = movement(user, card, TransactionType.EXPENSE, "100.00");
         transaction.setCategory(category); transaction.setCurrency("MXN");
-        when(transactionRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.findOwnedForUpdate(9L, USER_ID)).thenReturn(Optional.of(transaction));
         when(cardRepository.findOwnedForUpdate(4L, USER_ID)).thenReturn(Optional.of(card));
         when(settingsService.getOrCreateEntity(USER_ID)).thenReturn(settings(user, "MXN"));
         when(categoryRepository.findAvailableById(3L, USER_ID)).thenReturn(Optional.of(category));
@@ -165,7 +165,7 @@ class FinancialTransactionServiceTest {
         AppUser user = user(); Card card = creditCard(user); TransactionCategory category = category(CategoryType.EXPENSE);
         FinancialTransaction transaction = movement(user, card, TransactionType.EXPENSE, "500.00");
         transaction.setCategory(category); transaction.setCurrency("MXN");
-        when(transactionRepository.findByIdAndUserId(9L, USER_ID)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.findOwnedForUpdate(9L, USER_ID)).thenReturn(Optional.of(transaction));
         when(cardRepository.findOwnedForUpdate(4L, USER_ID)).thenReturn(Optional.of(card));
         when(settingsService.getOrCreateEntity(USER_ID)).thenReturn(settings(user, "MXN"));
         when(categoryRepository.findAvailableById(3L, USER_ID)).thenReturn(Optional.of(category));
@@ -175,6 +175,29 @@ class FinancialTransactionServiceTest {
         assertThrows(IllegalStateException.class, () -> service.update(USER_ID, 9L, updateRequest("300.00")));
 
         verify(transactionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateDebitExpenseValidatesOnlyDebitBalance() {
+        AppUser user = user();
+        Card card = debitCard(user);
+        TransactionCategory category = category(CategoryType.EXPENSE);
+        FinancialTransaction transaction = movement(user, card, TransactionType.EXPENSE, "100.00");
+        transaction.setCategory(category);
+        transaction.setCurrency("MXN");
+        when(transactionRepository.findOwnedForUpdate(9L, USER_ID)).thenReturn(Optional.of(transaction));
+        when(cardRepository.findOwnedForUpdate(4L, USER_ID)).thenReturn(Optional.of(card));
+        when(settingsService.getOrCreateEntity(USER_ID)).thenReturn(settings(user, "MXN"));
+        when(categoryRepository.findAvailableById(3L, USER_ID)).thenReturn(Optional.of(category));
+        when(transactionRepository.sumActiveByCardAndType(4L, TransactionType.INCOME)).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumActiveByCardAndType(4L, TransactionType.EXPENSE)).thenReturn(new BigDecimal("100.00"));
+        when(transactionRepository.sumActiveByCardAndType(4L, TransactionType.CREDIT_CARD_PAYMENT)).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.saveAndFlush(transaction)).thenReturn(transaction);
+
+        FinancialTransactionResponse response = service.update(USER_ID, 9L, updateRequest("150.00"));
+
+        assertEquals(new BigDecimal("150.00"), response.getAmount());
+        verify(transactionRepository).saveAndFlush(transaction);
     }
 
     private CreateFinancialTransactionRequest request(TransactionType type, String amount) {
@@ -191,6 +214,7 @@ class FinancialTransactionServiceTest {
     private FinanceSettings settings(AppUser user, String currency) { FinanceSettings settings = new FinanceSettings(); settings.setUser(user); settings.setBaseCurrency(currency); return settings; }
     private TransactionCategory category(CategoryType type) { TransactionCategory category = new TransactionCategory(); category.setId(3L); category.setName("Compras"); category.setType(type); category.setSystemDefined(true); return category; }
     private Card creditCard(AppUser user) { Card card = new Card(); card.setId(4L); card.setUser(user); card.setType(CardType.CREDIT); card.setCurrency("MXN"); card.setCreditLimit(new BigDecimal("1000.00")); card.setActive(true); return card; }
+    private Card debitCard(AppUser user) { Card card = new Card(); card.setId(4L); card.setUser(user); card.setType(CardType.DEBIT); card.setCurrency("MXN"); card.setOpeningBalance(new BigDecimal("1000.00")); card.setActive(true); return card; }
     private FinancialTransaction movement(AppUser user, Card card, TransactionType type, String amount) {
         FinancialTransaction transaction = new FinancialTransaction(); transaction.setId(9L); transaction.setUser(user);
         transaction.setCard(card); transaction.setType(type); transaction.setAmount(new BigDecimal(amount));

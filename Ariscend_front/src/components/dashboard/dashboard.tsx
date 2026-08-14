@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { Check, FilePlus2, Flame, RefreshCw, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { ProgressRing } from "@/components/dashboard/progress-ring";
@@ -30,13 +29,16 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const activeHabits = await habitsApi.list(selectedUser.id);
+      const [activeHabits, completions] = await Promise.all([
+        habitsApi.list(selectedUser.id),
+        habitsApi.allCompletions(selectedUser.id),
+      ]);
       setHabits(activeHabits);
-      const completionLists = await Promise.all(
-        activeHabits.map((habit) => habitsApi.completions(selectedUser.id, habit.id)),
-      );
       setHistories(
-        activeHabits.map((habit, index) => ({ habit, completions: completionLists[index] })),
+        activeHabits.map((habit) => ({
+          habit,
+          completions: completions.filter((completion) => completion.habitId === habit.id),
+        })),
       );
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudo cargar tu resumen.");
@@ -49,15 +51,15 @@ export function Dashboard() {
     if (!selectedUser) return;
     let active = true;
     const userId = selectedUser.id;
-    habitsApi.list(userId)
-      .then(async (activeHabits) => {
-        const completionLists = await Promise.all(
-          activeHabits.map((habit) => habitsApi.completions(userId, habit.id)),
-        );
+    Promise.all([habitsApi.list(userId), habitsApi.allCompletions(userId)])
+      .then(([activeHabits, completions]) => {
         if (!active) return;
         setHabits(activeHabits);
         setHistories(
-          activeHabits.map((habit, index) => ({ habit, completions: completionLists[index] })),
+          activeHabits.map((habit) => ({
+            habit,
+            completions: completions.filter((completion) => completion.habitId === habit.id),
+          })),
         );
       })
       .catch((requestError) => {
@@ -73,12 +75,16 @@ export function Dashboard() {
     if (!selectedUser || habit.completedToday) return;
     setCompletingId(habit.id);
     try {
-      await habitsApi.complete(selectedUser.id, habit.id);
+      const completion = await habitsApi.complete(selectedUser.id, habit.id);
       setHabits((current) =>
         current.map((item) => (item.id === habit.id ? { ...item, completedToday: true } : item)),
       );
+      setHistories((current) => current.map((history) =>
+        history.habit.id === habit.id
+          ? { ...history, habit: { ...history.habit, completedToday: true }, completions: [completion, ...history.completions] }
+          : history,
+      ));
       toast.success(`${habit.name} completado.`);
-      void load();
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "No se pudo completar el hábito.");
     } finally {
@@ -117,7 +123,7 @@ export function Dashboard() {
 
   return (
     <div>
-      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-7 flex items-end justify-between gap-4 md:mb-8">
+      <section className="animate-enter mb-7 flex items-end justify-between gap-4 md:mb-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">¡Buenos días, {selectedUser?.name.split(" ")[0]}!</h1>
           <p className="mt-2 text-[#a9abad] md:text-lg">Resumen de tu progreso general y acciones importantes.</p>
@@ -125,7 +131,7 @@ export function Dashboard() {
         <Button onClick={() => void createQuickNote()} disabled={creatingNote} className="hidden md:inline-flex">
           <FilePlus2 className="size-4" /> {creatingNote ? "Creando..." : "Nota rápida"}
         </Button>
-      </motion.section>
+      </section>
 
       <section className="grid gap-5 lg:grid-cols-[1fr_255px]">
         <ObsidianCard className="p-6 md:p-8">
@@ -180,11 +186,9 @@ export function Dashboard() {
         ) : (
           <div className="grid gap-3 md:grid-cols-3">
             {habits.slice(0, 3).map((habit, index) => (
-              <motion.button
+              <button
                 key={habit.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.06 }}
+                style={{ animationDelay: `${index * 60}ms` }}
                 onClick={() => void completeHabit(habit)}
                 disabled={habit.completedToday || completingId === habit.id}
                 className="obsidian-card focus-ring group flex min-h-24 items-center justify-between rounded-2xl p-5 text-left transition hover:bg-[#181818] disabled:opacity-70"
@@ -193,7 +197,7 @@ export function Dashboard() {
                 <span className={`relative z-10 flex size-9 items-center justify-center rounded-full border transition ${habit.completedToday ? "border-white bg-white text-black" : "border-white/15 text-[#8c8e91] group-hover:border-white group-hover:text-white"}`}>
                   <Check className="size-4" />
                 </span>
-              </motion.button>
+              </button>
             ))}
           </div>
         )}

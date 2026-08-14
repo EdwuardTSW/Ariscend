@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --background: #000000;
   --surface: #121212;
   --surface-raised: #1e1e1e;
@@ -21,6 +22,7 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     radial-gradient(circle at 48% -18%, rgba(255, 255, 255, 0.06), transparent 32rem),
@@ -32,6 +34,10 @@ body {
 button,
 input,
 textarea {
+  font: inherit;
+}
+
+select {
   font: inherit;
 }
 
@@ -87,6 +93,22 @@ a {
 .focus-ring:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 3px;
+}
+
+@keyframes enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-enter {
+  animation: enter 220ms ease-out both;
+}
+
+@media (max-width: 767px) {
+  .glass-panel {
+    background: rgba(18, 18, 18, 0.96);
+    backdrop-filter: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

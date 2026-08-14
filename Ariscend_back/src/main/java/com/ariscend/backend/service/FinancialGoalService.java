@@ -70,7 +70,7 @@ public class FinancialGoalService {
 
     @Transactional
     public FinancialGoalResponse update(Long userId, Long goalId, UpdateFinancialGoalRequest request) {
-        FinancialGoal goal = findOwnedGoal(userId, goalId);
+        FinancialGoal goal = findOwnedGoalForUpdate(userId, goalId);
         if (goal.getStatus() == GoalStatus.CANCELLED) throw new IllegalStateException("La meta está cancelada.");
         String newCurrency = FinanceUtils.normalizeCurrency(request.getCurrency());
         if (!goal.getCurrency().equals(newCurrency)
@@ -83,7 +83,7 @@ public class FinancialGoalService {
 
     @Transactional
     public void cancel(Long userId, Long goalId) {
-        FinancialGoal goal = findOwnedGoal(userId, goalId);
+        FinancialGoal goal = findOwnedGoalForUpdate(userId, goalId);
         if (goal.getStatus() != GoalStatus.CANCELLED) {
             goal.setStatus(GoalStatus.CANCELLED); goal.setCancelledAt(LocalDateTime.now()); goalRepository.save(goal);
         }
@@ -91,7 +91,7 @@ public class FinancialGoalService {
 
     @Transactional
     public GoalContributionResponse addContribution(Long userId, Long goalId, CreateGoalContributionRequest request) {
-        FinancialGoal goal = findOwnedGoal(userId, goalId);
+        FinancialGoal goal = findOwnedGoalForUpdate(userId, goalId);
         if (goal.getStatus() != GoalStatus.ACTIVE) throw new IllegalStateException("La meta no está activa.");
         String baseCurrency = settingsService.getOrCreateEntity(userId).getBaseCurrency();
         FinanceUtils.calculateBaseAmount(
@@ -128,7 +128,7 @@ public class FinancialGoalService {
 
     @Transactional
     public void cancelContribution(Long userId, Long goalId, Long contributionId) {
-        FinancialGoal goal = findOwnedGoal(userId, goalId);
+        FinancialGoal goal = findOwnedGoalForUpdate(userId, goalId);
         GoalContribution contribution = contributionRepository.findOwned(contributionId, goalId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aporte no encontrado."));
         if (contribution.getStatus() != FinancialStatus.CANCELLED) {
@@ -147,6 +147,10 @@ public class FinancialGoalService {
     }
     private FinancialGoal findOwnedGoal(Long userId, Long goalId) {
         return goalRepository.findByIdAndUserId(goalId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Meta financiera no encontrada."));
+    }
+    private FinancialGoal findOwnedGoalForUpdate(Long userId, Long goalId) {
+        return goalRepository.findOwnedForUpdate(goalId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meta financiera no encontrada."));
     }
     private BigDecimal currentAmount(Long goalId) {

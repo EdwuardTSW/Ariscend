@@ -5,12 +5,14 @@ export const notesApi = {
   list: (
     userId: number,
     filters: { query?: string; pinned?: boolean; archived?: boolean; page?: number; size?: number } = {},
+    signal?: AbortSignal,
   ) =>
     apiRequest<PagedResponse<Note>>(
       `/api/users/${userId}/notes${toQueryString({ archived: false, page: 0, size: 30, ...filters })}`,
+      { signal },
     ),
-  get: (userId: number, noteId: number) =>
-    apiRequest<Note>(`/api/users/${userId}/notes/${noteId}`),
+  get: (userId: number, noteId: number, signal?: AbortSignal) =>
+    apiRequest<Note>(`/api/users/${userId}/notes/${noteId}`, { signal }),
   create: (userId: number, data: { title?: string; content?: string } = {}) =>
     apiRequest<Note>(`/api/users/${userId}/notes`, {
       method: "POST",
@@ -20,10 +22,12 @@ export const notesApi = {
     userId: number,
     noteId: number,
     data: { title: string | null; content: string },
+    signal?: AbortSignal,
   ) =>
     apiRequest<Note>(`/api/users/${userId}/notes/${noteId}`, {
       method: "PUT",
       body: JSON.stringify(data),
+      signal,
     }),
   setPinned: (userId: number, noteId: number, pinned: boolean) =>
     apiRequest<Note>(`/api/users/${userId}/notes/${noteId}/pinned`, {

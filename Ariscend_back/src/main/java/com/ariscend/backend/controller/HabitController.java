@@ -68,6 +68,12 @@ public class HabitController {
         return habitService.complete(userId, habitId, request);
     }
 
+    @GetMapping("/completions")
+    @Operation(summary = "Consultar en una sola petición las finalizaciones de hábitos activos")
+    public List<HabitCompletionResponse> getAllCompletions(@PathVariable Long userId) {
+        return habitService.getAllCompletions(userId);
+    }
+
     @GetMapping("/{habitId}/completions")
     @Operation(summary = "Consultar el historial de finalizaciones de un hábito")
     @ApiResponses({

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ObsidianCard } from "@/components/ui/obsidian-card";
 import { PageLoading } from "@/components/feedback/page-loading";
+import { PageError } from "@/components/feedback/page-error";
 import { useSelectedUser } from "@/contexts/selected-user-context";
 import { tasksApi } from "@/services/tasks-api";
 import type { Task } from "@/types/api";
@@ -14,6 +15,8 @@ export function TasksPage() {
   const { selectedUser } = useSelectedUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("MEDIUM");
@@ -23,10 +26,10 @@ export function TasksPage() {
     let active = true;
     tasksApi.list(selectedUser.id)
       .then((result) => { if (active) setTasks(result); })
-      .catch((error) => { if (active) toast.error(error instanceof Error ? error.message : "No se pudieron cargar los pendientes."); })
+      .catch((requestError) => { if (active) setError(requestError instanceof Error ? requestError.message : "No se pudieron cargar los pendientes."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [selectedUser]);
+  }, [reloadKey, selectedUser]);
 
   async function submit(event: FormEvent) {
     event.preventDefault(); if (!selectedUser) return;
@@ -51,13 +54,14 @@ export function TasksPage() {
   }
 
   if (loading) return <PageLoading label="Cargando pendientes" />;
+  if (error) return <PageError message={error} onRetry={() => { setError(null); setLoading(true); setReloadKey((value) => value + 1); }} />;
 
   const priorityLabel = { LOW: "Baja", MEDIUM: "Media", HIGH: "Alta" };
   return (
     <div>
       <div className="mb-8 flex items-end justify-between gap-4"><div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#8c8e91]">Enfoque claro</p><h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">Pendientes</h1></div><Button onClick={() => setShowForm((value) => !value)}><Plus className="size-4" /> Nuevo</Button></div>
-      {showForm && <ObsidianCard className="mb-6 p-5"><form onSubmit={submit} className="grid gap-3 md:grid-cols-[1fr_180px_auto]"><input required maxLength={150} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="¿Qué necesitas hacer?" className="focus-ring h-11 rounded-xl border border-white/10 bg-black px-4" /><select value={priority} onChange={(event) => setPriority(event.target.value as Task["priority"])} className="focus-ring h-11 rounded-xl border border-white/10 bg-black px-4"><option value="LOW">Prioridad baja</option><option value="MEDIUM">Prioridad media</option><option value="HIGH">Prioridad alta</option></select><Button type="submit">Crear</Button></form></ObsidianCard>}
-      {tasks.length === 0 ? <ObsidianCard className="p-10 text-center text-[#999b9e]">No tienes pendientes. Disfruta el espacio.</ObsidianCard> : <div className="space-y-3">{tasks.map((task) => <ObsidianCard key={task.id} className={`flex items-center gap-4 p-4 md:p-5 ${task.completed ? "opacity-55" : ""}`}><button onClick={() => void toggle(task)} className="focus-ring relative z-10 rounded-full">{task.completed ? <Check className="size-7 rounded-full bg-white p-1.5 text-black" /> : <Circle className="size-7 text-[#66686b]" />}</button><div className="relative z-10 min-w-0 flex-1"><h2 className={`truncate font-semibold ${task.completed ? "line-through" : ""}`}>{task.title}</h2><p className="mt-1 text-xs text-[#818386]">Prioridad {priorityLabel[task.priority]}{task.dueDate ? ` · ${task.dueDate}` : ""}</p></div><Button variant="ghost" size="icon" onClick={() => void remove(task)}><Trash2 className="size-4" /></Button></ObsidianCard>)}</div>}
+      {showForm && <ObsidianCard className="mb-6 p-5"><form onSubmit={submit} className="grid gap-3 md:grid-cols-[1fr_180px_auto]"><input aria-label="Título del pendiente" required maxLength={150} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="¿Qué necesitas hacer?" className="focus-ring h-11 rounded-xl border border-white/10 bg-black px-4" /><select aria-label="Prioridad" value={priority} onChange={(event) => setPriority(event.target.value as Task["priority"])} className="focus-ring h-11 rounded-xl border border-white/10 bg-black px-4"><option value="LOW">Prioridad baja</option><option value="MEDIUM">Prioridad media</option><option value="HIGH">Prioridad alta</option></select><Button type="submit">Crear</Button></form></ObsidianCard>}
+      {tasks.length === 0 ? <ObsidianCard className="p-10 text-center text-[#999b9e]">No tienes pendientes. Disfruta el espacio.</ObsidianCard> : <div className="space-y-3">{tasks.map((task) => <ObsidianCard key={task.id} className="flex items-center gap-4 p-4 md:p-5"><button aria-label={task.completed ? `Marcar ${task.title} como pendiente` : `Completar ${task.title}`} onClick={() => void toggle(task)} className="focus-ring relative z-10 flex size-11 items-center justify-center rounded-full">{task.completed ? <Check className="size-7 rounded-full bg-white p-1.5 text-black" /> : <Circle className="size-7 text-[#a9abad]" />}</button><div className="relative z-10 min-w-0 flex-1"><h2 className={`truncate font-semibold ${task.completed ? "text-[#a9abad] line-through" : ""}`}>{task.title}</h2><p className="mt-1 text-xs text-[#a9abad]">Prioridad {priorityLabel[task.priority]}{task.dueDate ? ` · ${task.dueDate}` : ""}</p></div><Button aria-label={`Eliminar ${task.title}`} variant="ghost" size="icon" onClick={() => void remove(task)}><Trash2 className="size-4" /></Button></ObsidianCard>)}</div>}
     </div>
   );
 }

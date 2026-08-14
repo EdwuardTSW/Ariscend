@@ -14,6 +14,7 @@ import com.ariscend.backend.repository.NoteRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,13 +68,20 @@ public class NoteService {
                 )
         );
         String normalizedQuery = query == null || query.isBlank() ? null : query.trim();
-        Page<NoteResponse> notes = noteRepository.findByUserAndFilters(
-                        userId,
-                        pinned,
-                        archived,
-                        normalizedQuery,
-                        pageable
-                )
+        Specification<Note> filters = (root, criteriaQuery, builder) ->
+                builder.equal(root.get("user").get("id"), userId);
+        if (pinned != null) filters = filters.and((root, criteriaQuery, builder) ->
+                builder.equal(root.get("pinned"), pinned));
+        if (archived != null) filters = filters.and((root, criteriaQuery, builder) ->
+                builder.equal(root.get("archived"), archived));
+        if (normalizedQuery != null) {
+            String searchPattern = "%" + normalizedQuery.toLowerCase() + "%";
+            filters = filters.and((root, criteriaQuery, builder) -> builder.or(
+                    builder.like(builder.lower(root.get("title")), searchPattern),
+                    builder.like(builder.lower(root.get("content")), searchPattern)
+            ));
+        }
+        Page<NoteResponse> notes = noteRepository.findAll(filters, pageable)
                 .map(NoteResponse::from);
 
         return PagedResponse.from(notes);

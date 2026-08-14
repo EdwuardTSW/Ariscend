@@ -5,6 +5,20 @@ import { usersApi } from "@/services/users-api";
 import type { User } from "@/types/api";
 
 const STORAGE_KEY = "ariscend.selectedUserId";
+const STORED_USER_KEY = "ariscend.selectedUser";
+
+function readStoredUser(): User | null {
+  try {
+    const value = window.localStorage.getItem(STORED_USER_KEY);
+    if (!value) return null;
+    const user = JSON.parse(value) as Partial<User>;
+    return typeof user.id === "number" && typeof user.name === "string" && typeof user.email === "string"
+      ? user as User
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 interface SelectedUserContextValue {
   users: User[];
@@ -26,6 +40,7 @@ export function SelectedUserProvider({ children }: { children: React.ReactNode }
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
+    setLoading(true);
     setError(null);
     try {
       const result = await usersApi.list();
@@ -33,7 +48,11 @@ export function SelectedUserProvider({ children }: { children: React.ReactNode }
       const storedId = window.localStorage.getItem(STORAGE_KEY);
       const storedUser = result.find((user) => String(user.id) === storedId) ?? null;
       setSelectedUser(storedUser);
-      if (storedId && !storedUser) window.localStorage.removeItem(STORAGE_KEY);
+      if (storedUser) window.localStorage.setItem(STORED_USER_KEY, JSON.stringify(storedUser));
+      if (storedId && !storedUser) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(STORED_USER_KEY);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "No se pudo conectar con el backend.");
     } finally {
@@ -42,27 +61,41 @@ export function SelectedUserProvider({ children }: { children: React.ReactNode }
   }
 
   useEffect(() => {
+    const cachedUser = readStoredUser();
     let active = true;
-    usersApi.list()
+    if (cachedUser) {
+      queueMicrotask(() => {
+        if (!active) return;
+        setSelectedUser(cachedUser);
+        setLoading(false);
+      });
+    }
+    const controller = new AbortController();
+    usersApi.list(controller.signal)
       .then((result) => {
         if (!active) return;
         setUsers(result);
         const storedId = window.localStorage.getItem(STORAGE_KEY);
         const storedUser = result.find((user) => String(user.id) === storedId) ?? null;
         setSelectedUser(storedUser);
-        if (storedId && !storedUser) window.localStorage.removeItem(STORAGE_KEY);
+        if (storedUser) window.localStorage.setItem(STORED_USER_KEY, JSON.stringify(storedUser));
+        if (storedId && !storedUser) {
+          window.localStorage.removeItem(STORAGE_KEY);
+          window.localStorage.removeItem(STORED_USER_KEY);
+        }
       })
       .catch((requestError) => {
-        if (active) setError(requestError instanceof Error ? requestError.message : "No se pudo conectar con el backend.");
+        if (active && !cachedUser) setError(requestError instanceof Error ? requestError.message : "No se pudo conectar con el backend.");
       })
       .finally(() => {
         if (active) setLoading(false);
       });
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, []);
 
   function selectUser(user: User) {
     window.localStorage.setItem(STORAGE_KEY, String(user.id));
+    window.localStorage.setItem(STORED_USER_KEY, JSON.stringify(user));
     setSelectedUser(user);
   }
 
@@ -75,6 +108,7 @@ export function SelectedUserProvider({ children }: { children: React.ReactNode }
 
   function clearUser() {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(STORED_USER_KEY);
     setSelectedUser(null);
   }
 

@@ -14,10 +14,12 @@ import com.ariscend.backend.repository.NoteRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -74,13 +76,8 @@ class NoteServiceTest {
     void getAllReturnsPagedNotesAndNormalizesSearch() {
         Note note = note(USER_ID);
         when(appUserRepository.existsById(USER_ID)).thenReturn(true);
-        when(noteRepository.findByUserAndFilters(
-                eq(USER_ID),
-                eq(true),
-                eq(false),
-                eq("reunión"),
-                any(Pageable.class)
-        )).thenReturn(new PageImpl<>(List.of(note)));
+        when(noteRepository.findAll(ArgumentMatchers.<Specification<Note>>any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(note)));
 
         PagedResponse<NoteResponse> response = noteService.getAllByUser(
                 USER_ID,

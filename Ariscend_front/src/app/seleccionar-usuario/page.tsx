@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { ArrowRight, Plus, RefreshCw, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,14 +13,19 @@ import type { User } from "@/types/api";
 export default function SelectUserPage() {
   const { users, loading, error, selectUser, createUser, refresh } = useSelectedUser();
   const router = useRouter();
-  const [showForm, setShowForm] = useState(users.length === 0);
+  const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
+  function destination() {
+    const next = new URLSearchParams(window.location.search).get("next");
+    return next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+  }
+
   function choose(user: User) {
     selectUser(user);
-    router.push("/");
+    router.push(destination());
   }
 
   async function submit(event: FormEvent) {
@@ -30,7 +34,7 @@ export default function SelectUserPage() {
     try {
       await createUser({ name, email });
       toast.success("Tu espacio está listo.");
-      router.push("/");
+      router.push(destination());
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "No se pudo crear el usuario.");
     } finally {
@@ -42,7 +46,7 @@ export default function SelectUserPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-12 md:px-8">
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="animate-enter">
         <p className="mb-8 text-3xl font-bold tracking-[-0.05em] md:text-5xl">Ariscend</p>
         <div className="mb-9 max-w-2xl">
           <p className="mb-3 font-[var(--font-geist)] text-xs font-semibold uppercase tracking-[0.18em] text-[#8c8e91]">
@@ -65,11 +69,9 @@ export default function SelectUserPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {users.map((user, index) => (
-            <motion.button
+            <button
               key={user.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => choose(user)}
               className="obsidian-card focus-ring group rounded-2xl p-5 text-left transition hover:-translate-y-0.5 hover:bg-[#181818]"
             >
@@ -81,19 +83,21 @@ export default function SelectUserPage() {
               </div>
               <p className="text-xl font-semibold">{user.name}</p>
               <p className="mt-1 truncate text-sm text-[#8c8e91]">{user.email}</p>
-            </motion.button>
+            </button>
           ))}
 
-          <button
-            onClick={() => setShowForm(true)}
-            className="focus-ring flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 text-[#a9abad] transition hover:border-white/35 hover:bg-white/[0.03] hover:text-white"
-          >
-            <Plus className="size-6" />
-            <span className="font-semibold">Crear otro espacio</span>
-          </button>
+          {!error && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="focus-ring flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 text-[#a9abad] transition hover:border-white/35 hover:bg-white/[0.03] hover:text-white"
+            >
+              <Plus className="size-6" />
+              <span className="font-semibold">Crear otro espacio</span>
+            </button>
+          )}
         </div>
 
-        {showForm && (
+        {(showForm || users.length === 0) && !error && (
           <ObsidianCard className="mt-6 max-w-xl p-6 md:p-8">
             <h2 className="text-xl font-semibold">Nuevo usuario</h2>
             <form onSubmit={submit} className="mt-6 space-y-4">
@@ -127,7 +131,7 @@ export default function SelectUserPage() {
             </form>
           </ObsidianCard>
         )}
-      </motion.div>
+      </div>
     </main>
   );
 }

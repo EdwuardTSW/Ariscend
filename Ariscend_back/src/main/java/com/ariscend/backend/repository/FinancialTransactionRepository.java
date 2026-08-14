@@ -1,48 +1,35 @@
 package com.ariscend.backend.repository;
 
-import com.ariscend.backend.entity.FinancialStatus;
 import com.ariscend.backend.entity.FinancialTransaction;
 import com.ariscend.backend.entity.TransactionType;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface FinancialTransactionRepository extends JpaRepository<FinancialTransaction, Long> {
+public interface FinancialTransactionRepository extends JpaRepository<FinancialTransaction, Long>,
+        JpaSpecificationExecutor<FinancialTransaction> {
 
     Optional<FinancialTransaction> findByIdAndUserId(Long transactionId, Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT movement FROM FinancialTransaction movement WHERE movement.id = :transactionId AND movement.user.id = :userId")
+    Optional<FinancialTransaction> findOwnedForUpdate(
+            @Param("transactionId") Long transactionId,
+            @Param("userId") Long userId
+    );
+
     boolean existsByUserId(Long userId);
     boolean existsByCardIdOrPaidCreditCardId(Long cardId, Long paidCreditCardId);
     boolean existsByCategoryId(Long categoryId);
-
-    @Query("""
-            SELECT movement FROM FinancialTransaction movement
-            WHERE movement.user.id = :userId
-              AND (:type IS NULL OR movement.type = :type)
-              AND (:categoryId IS NULL OR movement.category.id = :categoryId)
-              AND (:cardId IS NULL OR movement.card.id = :cardId OR movement.paidCreditCard.id = :cardId)
-              AND (:currency IS NULL OR movement.currency = :currency)
-              AND (:dateFrom IS NULL OR movement.transactionDate >= :dateFrom)
-              AND (:dateTo IS NULL OR movement.transactionDate <= :dateTo)
-              AND (:status IS NULL OR movement.status = :status)
-            """)
-    Page<FinancialTransaction> findByFilters(
-            @Param("userId") Long userId,
-            @Param("type") TransactionType type,
-            @Param("categoryId") Long categoryId,
-            @Param("cardId") Long cardId,
-            @Param("currency") String currency,
-            @Param("dateFrom") LocalDate dateFrom,
-            @Param("dateTo") LocalDate dateTo,
-            @Param("status") FinancialStatus status,
-            Pageable pageable
-    );
 
     @Query("""
             SELECT COALESCE(SUM(movement.amount), 0) FROM FinancialTransaction movement

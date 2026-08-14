@@ -19,6 +19,7 @@ export interface Habit {
 
 export interface HabitCompletion {
   id: number;
+  habitId: number;
   completedDate: string;
   completedAt: string;
   notes: string | null;
@@ -76,4 +77,121 @@ export interface FinanceSummary {
   incomeByCategory: Record<string, number>;
   expensesByCategory: Record<string, number>;
   originalTotalsByCurrency: Record<string, { income: number; expenses: number }>;
+}
+
+export type CategoryType = "INCOME" | "EXPENSE";
+export type CardType = "CREDIT" | "DEBIT";
+export type TransactionType = "INCOME" | "EXPENSE" | "CREDIT_CARD_PAYMENT";
+export type FinancialStatus = "ACTIVE" | "CANCELLED";
+export type GoalStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+export interface TransactionCategory {
+  id: number;
+  name: string;
+  type: CategoryType;
+  systemDefined: boolean;
+  systemKey: string | null;
+  active: boolean;
+}
+
+export interface Card {
+  id: number;
+  userId: number;
+  alias: string;
+  issuer: string;
+  type: CardType;
+  lastFourDigits: string;
+  currency: string;
+  creditLimit: number | null;
+  openingBalance: number | null;
+  closingDay: number | null;
+  paymentDueDay: number | null;
+  active: boolean;
+  createdAt: string;
+  cancelledAt: string | null;
+}
+
+export interface CardSummary {
+  cardId: number;
+  type: CardType;
+  currency: string;
+  currentBalance: number | null;
+  currentDebt: number | null;
+  availableCredit: number | null;
+  nextClosingDate: string | null;
+  nextPaymentDate: string | null;
+  daysUntilPayment: number | null;
+  paymentAlertStatus: "NONE" | "UPCOMING" | "DUE_TODAY";
+}
+
+export interface FinancialTransaction {
+  id: number;
+  userId: number;
+  type: TransactionType;
+  categoryId: number | null;
+  categoryName: string | null;
+  cardId: number | null;
+  paidCreditCardId: number | null;
+  amount: number;
+  currency: string;
+  exchangeRate: number;
+  baseAmount: number;
+  description: string | null;
+  transactionDate: string;
+  status: FinancialStatus;
+  goalGenerated: boolean;
+  createdAt: string;
+  cancelledAt: string | null;
+}
+
+export interface FinancialGoal {
+  id: number;
+  userId: number;
+  name: string;
+  description: string | null;
+  targetAmount: number;
+  currentAmount: number;
+  remainingAmount: number;
+  progressPercentage: number;
+  currency: string;
+  targetDate: string | null;
+  status: GoalStatus;
+  createdAt: string;
+}
+
+export interface GoalContribution {
+  id: number;
+  goalId: number;
+  transactionId: number;
+  amount: number;
+  currency: string;
+  exchangeRate: number;
+  contributionDate: string;
+  notes: string | null;
+  status: FinancialStatus;
+  createdAt: string;
+}
+
+export interface CardInput {
+  alias: string;
+  issuer: string;
+  type: CardType;
+  lastFourDigits: string;
+  currency: string;
+  creditLimit?: number | null;
+  openingBalance?: number | null;
+  closingDay?: number | null;
+  paymentDueDay?: number | null;
+}
+
+export interface FinancialTransactionInput {
+  type: TransactionType;
+  categoryId?: number | null;
+  cardId?: number | null;
+  paidCreditCardId?: number | null;
+  amount: number;
+  currency: string;
+  exchangeRate?: number | null;
+  description?: string | null;
+  transactionDate: string;
 }

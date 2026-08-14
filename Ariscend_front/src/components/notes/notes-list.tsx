@@ -31,19 +31,21 @@ export function NotesList() {
 
   useEffect(() => {
     if (!selectedUser) return;
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
       setError(null);
       try {
-        const result = await notesApi.list(selectedUser.id, { query, archived });
+        const result = await notesApi.list(selectedUser.id, { query, archived }, controller.signal);
         setNotes(result.content);
       } catch (requestError) {
+        if (controller.signal.aborted) return;
         setError(requestError instanceof Error ? requestError.message : "No se pudieron cargar las notas.");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }, 220);
-    return () => window.clearTimeout(timer);
+    return () => { window.clearTimeout(timer); controller.abort(); };
   }, [archived, query, reloadKey, selectedUser]);
 
   async function createNote() {
@@ -85,6 +87,7 @@ export function NotesList() {
         <label className="relative flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#77797c]" />
           <input
+            aria-label="Buscar en tus notas"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar en tus notas"
@@ -114,21 +117,22 @@ export function NotesList() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {notes.map((note) => (
             <ObsidianCard key={note.id} className="group min-h-52 p-5 transition hover:-translate-y-0.5 hover:bg-[#171717]">
-              <Link href={`/notas/${note.id}`} className="focus-ring relative z-10 block h-full rounded-lg">
-                <div className="mb-8 flex items-start justify-between gap-3">
+              <button
+                onClick={() => void togglePin(note)}
+                className={`focus-ring absolute right-4 top-4 z-20 flex size-11 items-center justify-center rounded-full transition ${note.pinned ? "bg-white text-black" : "text-[#a9abad] hover:bg-white/[0.06] hover:text-white"}`}
+                aria-label={note.pinned ? `Desfijar ${note.title || "nota sin título"}` : `Fijar ${note.title || "nota sin título"}`}
+                aria-pressed={note.pinned}
+              >
+                <Pin className="size-4" />
+              </button>
+              <Link href={`/notas/${note.id}`} className="focus-ring relative z-10 block h-full rounded-lg pr-12">
+                <div className="mb-8">
                   <h2 className="line-clamp-2 text-xl font-semibold leading-7">{note.title?.trim() || "Nota sin título"}</h2>
-                  <button
-                    onClick={(event) => { event.preventDefault(); void togglePin(note); }}
-                    className={`focus-ring shrink-0 rounded-full p-2 transition ${note.pinned ? "bg-white text-black" : "text-[#77797c] hover:bg-white/[0.06] hover:text-white"}`}
-                    aria-label={note.pinned ? "Desfijar nota" : "Fijar nota"}
-                  >
-                    <Pin className="size-4" />
-                  </button>
                 </div>
                 <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-6 text-[#9b9da0]">
                   {note.content.trim() || "Empieza a escribir..."}
                 </p>
-                <p className="absolute bottom-0 left-0 font-[var(--font-geist)] text-[11px] uppercase tracking-[0.08em] text-[#66686b]">
+                <p className="absolute bottom-0 left-0 font-[var(--font-geist)] text-xs uppercase tracking-[0.08em] text-[#a9abad]">
                   {dateFormatter.format(new Date(note.updatedAt))}
                 </p>
               </Link>

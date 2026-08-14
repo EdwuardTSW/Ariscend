@@ -37,7 +37,7 @@ class FinancialGoalServiceTest {
         TransactionCategory category = new TransactionCategory(); category.setId(3L);
         FinanceSettings settings = new FinanceSettings(); settings.setUser(user); settings.setBaseCurrency("MXN");
         FinancialTransaction transaction = new FinancialTransaction(); transaction.setId(8L); transaction.setUser(user);
-        when(goalRepository.findByIdAndUserId(2L, 1L)).thenReturn(Optional.of(goal));
+        when(goalRepository.findOwnedForUpdate(2L, 1L)).thenReturn(Optional.of(goal));
         when(settingsService.getOrCreateEntity(1L)).thenReturn(settings);
         when(categoryRepository.findBySystemKey("EXPENSE_GOALS")).thenReturn(Optional.of(category));
         when(transactionService.createGoalExpense(eq(user), eq(category), isNull(), any(), eq("MXN"), any(), any(), anyString())).thenReturn(transaction);
@@ -57,7 +57,7 @@ class FinancialGoalServiceTest {
 
     @Test
     void contributionDoesNotUseGoalOwnedByAnotherUser() {
-        when(goalRepository.findByIdAndUserId(2L, 7L)).thenReturn(Optional.empty());
+        when(goalRepository.findOwnedForUpdate(2L, 7L)).thenReturn(Optional.empty());
         CreateGoalContributionRequest request = new CreateGoalContributionRequest(); request.setAmount(BigDecimal.TEN);
         request.setContributionDate(LocalDate.now());
 

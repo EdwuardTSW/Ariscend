@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -39,9 +41,12 @@ public class HabitService {
         if (!appUserRepository.existsById(userId)) {
             throw new ResourceNotFoundException("Usuario no encontrado.");
         }
+        Set<Long> completedToday = new HashSet<>(habitCompletionRepository.findCompletedHabitIds(
+                userId, LocalDate.now()
+        ));
         return habitRepository.findByUserIdAndActiveTrueOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(this::toResponse)
+                .map(habit -> HabitResponse.from(habit, completedToday.contains(habit.getId())))
                 .toList();
     }
 
@@ -62,7 +67,7 @@ public class HabitService {
         habit.setColor(request.getColor());
         habit.setIcon(request.getIcon());
 
-        return toResponse(habitRepository.save(habit));
+        return HabitResponse.from(habitRepository.save(habit), false);
     }
 
     @Transactional
@@ -99,19 +104,21 @@ public class HabitService {
                 .toList();
     }
 
+    public List<HabitCompletionResponse> getAllCompletions(Long userId) {
+        if (!appUserRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado.");
+        }
+        return habitCompletionRepository.findActiveHabitCompletionsByUserId(userId).stream()
+                .map(HabitCompletionResponse::from)
+                .toList();
+    }
+
     @Transactional
     public void deactivate(Long userId, Long habitId) {
         Habit habit = findOwnedHabit(userId, habitId);
 
         habit.setActive(false);
         habitRepository.save(habit);
-    }
-
-    private HabitResponse toResponse(Habit habit) {
-        boolean completedToday = habitCompletionRepository
-                .existsByHabitIdAndCompletedDate(habit.getId(), LocalDate.now());
-
-        return HabitResponse.from(habit, completedToday);
     }
 
     private Habit findOwnedHabit(Long userId, Long habitId) {
