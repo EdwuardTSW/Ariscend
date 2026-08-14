@@ -9,13 +9,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/habits")
+@RequestMapping("/api/users/{userId}/habits")
 @Tag(name = "Hábitos")
 public class HabitController {
 
@@ -27,8 +28,11 @@ public class HabitController {
 
     @GetMapping
     @Operation(summary = "Listar los hábitos activos de un usuario")
-    @ApiResponse(responseCode = "200", description = "Hábitos encontrados")
-    public List<HabitResponse> getAllByUser(@RequestParam Long userId) {
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Hábitos encontrados"),
+            @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    })
+    public List<HabitResponse> getAllByUser(@PathVariable Long userId) {
         return habitService.getAllByUser(userId);
     }
 
@@ -40,8 +44,11 @@ public class HabitController {
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
-    public HabitResponse create(@RequestBody CreateHabitRequest request) {
-        return habitService.create(request);
+    public HabitResponse create(
+            @PathVariable Long userId,
+            @Valid @RequestBody CreateHabitRequest request
+    ) {
+        return habitService.create(userId, request);
     }
 
     @PostMapping("/{habitId}/complete")
@@ -55,16 +62,23 @@ public class HabitController {
     })
     public HabitCompletionResponse complete(
             @PathVariable Long habitId,
-            @RequestBody CompleteHabitRequest request
+            @PathVariable Long userId,
+            @Valid @RequestBody CompleteHabitRequest request
     ) {
-        return habitService.complete(habitId, request);
+        return habitService.complete(userId, habitId, request);
     }
 
     @GetMapping("/{habitId}/completions")
     @Operation(summary = "Consultar el historial de finalizaciones de un hábito")
-    @ApiResponse(responseCode = "200", description = "Finalizaciones encontradas")
-    public List<HabitCompletionResponse> getCompletions(@PathVariable Long habitId) {
-        return habitService.getCompletions(habitId);
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Finalizaciones encontradas"),
+            @ApiResponse(responseCode = "404", description = "Hábito no encontrado")
+    })
+    public List<HabitCompletionResponse> getCompletions(
+            @PathVariable Long userId,
+            @PathVariable Long habitId
+    ) {
+        return habitService.getCompletions(userId, habitId);
     }
 
     @DeleteMapping("/{habitId}")
@@ -74,7 +88,7 @@ public class HabitController {
             @ApiResponse(responseCode = "204", description = "Hábito desactivado"),
             @ApiResponse(responseCode = "404", description = "Hábito no encontrado")
     })
-    public void deactivate(@PathVariable Long habitId) {
-        habitService.deactivate(habitId);
+    public void deactivate(@PathVariable Long userId, @PathVariable Long habitId) {
+        habitService.deactivate(userId, habitId);
     }
 }

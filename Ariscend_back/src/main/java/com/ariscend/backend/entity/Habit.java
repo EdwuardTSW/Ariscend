@@ -16,21 +16,25 @@ public class Habit {
     @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 120)
     private String name;
 
+    @Column(length = 1000)
     private String description;
 
+    @Column(length = 80)
     private String category;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String frequency = "DAILY";
 
     @Column(name = "target_days_per_week", nullable = false)
     private Integer targetDaysPerWeek = 7;
 
+    @Column(length = 20)
     private String color;
 
+    @Column(length = 50)
     private String icon;
 
     @Column(name = "is_active", nullable = false)

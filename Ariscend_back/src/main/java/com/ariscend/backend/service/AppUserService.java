@@ -25,21 +25,15 @@ public class AppUserService {
     }
 
     public UserResponse create(CreateUserRequest request) {
-        if (request.getName() == null || request.getName().isBlank()) {
-            throw new IllegalArgumentException("El nombre es obligatorio.");
-        }
-
-        if (request.getEmail() == null || request.getEmail().isBlank()) {
-            throw new IllegalArgumentException("El correo es obligatorio.");
-        }
-
-        if (appUserRepository.existsByEmail(request.getEmail())) {
+        String name = request.getName().trim();
+        String email = request.getEmail().trim().toLowerCase();
+        if (appUserRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Ese correo ya está registrado.");
         }
 
         AppUser user = new AppUser();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        user.setName(name);
+        user.setEmail(email);
 
         return UserResponse.from(appUserRepository.save(user));
     }

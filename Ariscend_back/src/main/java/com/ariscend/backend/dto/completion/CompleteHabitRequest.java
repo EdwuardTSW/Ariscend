@@ -1,10 +1,16 @@
 package com.ariscend.backend.dto.completion;
 
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDate;
 
 public class CompleteHabitRequest {
 
+    @PastOrPresent(message = "La fecha de finalización no puede ser futura.")
     private LocalDate completedDate;
+
+    @Size(max = 1000, message = "Las notas no pueden superar los 1000 caracteres.")
     private String notes;
 
     public LocalDate getCompletedDate() {

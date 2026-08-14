@@ -1,23 +1,35 @@
 package com.ariscend.backend.dto.habit;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 public class CreateHabitRequest {
 
-    private Long userId;
+    @NotBlank(message = "El nombre del hábito es obligatorio.")
+    @Size(max = 120, message = "El nombre no puede superar los 120 caracteres.")
     private String name;
+
+    @Size(max = 1000, message = "La descripción no puede superar los 1000 caracteres.")
     private String description;
+
+    @Size(max = 80, message = "La categoría no puede superar los 80 caracteres.")
     private String category;
+
+    @Pattern(regexp = "DAILY|WEEKLY", message = "La frecuencia debe ser DAILY o WEEKLY.")
     private String frequency;
+
+    @Min(value = 1, message = "Los días objetivo deben ser al menos 1.")
+    @Max(value = 7, message = "Los días objetivo no pueden superar 7.")
     private Integer targetDaysPerWeek;
+
+    @Size(max = 20, message = "El color no puede superar los 20 caracteres.")
     private String color;
+
+    @Size(max = 50, message = "El icono no puede superar los 50 caracteres.")
     private String icon;
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
 
     public String getName() {
         return name;

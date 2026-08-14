@@ -12,11 +12,13 @@ import com.ariscend.backend.repository.AppUserRepository;
 import com.ariscend.backend.repository.HabitCompletionRepository;
 import com.ariscend.backend.repository.HabitRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class HabitService {
 
     private final HabitRepository habitRepository;
@@ -34,27 +36,23 @@ public class HabitService {
     }
 
     public List<HabitResponse> getAllByUser(Long userId) {
+        if (!appUserRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuario no encontrado.");
+        }
         return habitRepository.findByUserIdAndActiveTrueOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public HabitResponse create(CreateHabitRequest request) {
-        if (request.getUserId() == null) {
-            throw new IllegalArgumentException("El usuario es obligatorio.");
-        }
-
-        if (request.getName() == null || request.getName().isBlank()) {
-            throw new IllegalArgumentException("El nombre del hábito es obligatorio.");
-        }
-
-        AppUser user = appUserRepository.findById(request.getUserId())
+    @Transactional
+    public HabitResponse create(Long userId, CreateHabitRequest request) {
+        AppUser user = appUserRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado."));
 
         Habit habit = new Habit();
         habit.setUser(user);
-        habit.setName(request.getName());
+        habit.setName(request.getName().trim());
         habit.setDescription(request.getDescription());
         habit.setCategory(request.getCategory());
         habit.setFrequency(request.getFrequency() == null ? "DAILY" : request.getFrequency());
@@ -67,13 +65,19 @@ public class HabitService {
         return toResponse(habitRepository.save(habit));
     }
 
-    public HabitCompletionResponse complete(Long habitId, CompleteHabitRequest request) {
-        Habit habit = habitRepository.findById(habitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Hábito no encontrado."));
+    @Transactional
+    public HabitCompletionResponse complete(Long userId, Long habitId, CompleteHabitRequest request) {
+        Habit habit = findOwnedHabit(userId, habitId);
+        if (!habit.getActive()) {
+            throw new IllegalStateException("No se puede completar un hábito inactivo.");
+        }
 
         LocalDate completedDate = request.getCompletedDate() == null
                 ? LocalDate.now()
                 : request.getCompletedDate();
+        if (completedDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("La fecha de finalización no puede ser futura.");
+        }
 
         if (habitCompletionRepository.existsByHabitIdAndCompletedDate(habitId, completedDate)) {
             throw new IllegalStateException("Este hábito ya fue completado en esa fecha.");
@@ -87,16 +91,17 @@ public class HabitService {
         return HabitCompletionResponse.from(habitCompletionRepository.save(completion));
     }
 
-    public List<HabitCompletionResponse> getCompletions(Long habitId) {
+    public List<HabitCompletionResponse> getCompletions(Long userId, Long habitId) {
+        findOwnedHabit(userId, habitId);
         return habitCompletionRepository.findByHabitIdOrderByCompletedDateDesc(habitId)
                 .stream()
                 .map(HabitCompletionResponse::from)
                 .toList();
     }
 
-    public void deactivate(Long habitId) {
-        Habit habit = habitRepository.findById(habitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Hábito no encontrado."));
+    @Transactional
+    public void deactivate(Long userId, Long habitId) {
+        Habit habit = findOwnedHabit(userId, habitId);
 
         habit.setActive(false);
         habitRepository.save(habit);
@@ -107,5 +112,10 @@ public class HabitService {
                 .existsByHabitIdAndCompletedDate(habit.getId(), LocalDate.now());
 
         return HabitResponse.from(habit, completedToday);
+    }
+
+    private Habit findOwnedHabit(Long userId, Long habitId) {
+        return habitRepository.findByIdAndUserId(habitId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hábito no encontrado."));
     }
 }

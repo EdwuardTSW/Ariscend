@@ -28,6 +28,7 @@ public class HabitCompletion {
     @Column(name = "completed_at", nullable = false)
     private LocalDateTime completedAt;
 
+    @Column(length = 1000)
     private String notes;
 
     public HabitCompletion() {
