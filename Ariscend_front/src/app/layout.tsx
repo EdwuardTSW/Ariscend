@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Hanken_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
-import { SelectedUserProvider } from "@/contexts/selected-user-context";
+import { AuthProvider } from "@/contexts/auth-context";
 import "./globals.css";
 
 const hanken = Hanken_Grotesk({
@@ -23,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="es" className={`${hanken.variable} ${geist.variable}`}>
       <body className="font-[var(--font-hanken)]">
-        <SelectedUserProvider>{children}</SelectedUserProvider>
+        <AuthProvider>{children}</AuthProvider>
         <Toaster theme="dark" position="top-center" richColors />
       </body>
     </html>

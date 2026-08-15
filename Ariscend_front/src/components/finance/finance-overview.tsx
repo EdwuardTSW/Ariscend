@@ -55,7 +55,7 @@ export function FinanceOverview() {
         </ObsidianCard>
         <ObsidianCard className="p-5"><div className="relative z-10"><ArrowUpRight className="size-5 text-[#b8babc]" /><p className="mt-7 text-sm text-[#8c8e91]">Ingresos</p><p className="mt-1 text-2xl font-semibold">{formatMoney(summary.totalIncome, summary.baseCurrency)}</p></div></ObsidianCard>
         <ObsidianCard className="p-5"><div className="relative z-10"><ArrowDownRight className="size-5 text-[#b8babc]" /><p className="mt-7 text-sm text-[#8c8e91]">Gastos</p><p className="mt-1 text-2xl font-semibold">{formatMoney(summary.totalExpenses, summary.baseCurrency)}</p></div></ObsidianCard>
-        <ObsidianCard className="p-5"><div className="relative z-10"><CalendarDays className="size-5 text-[#b8babc]" /><p className="mt-7 text-sm text-[#8c8e91]">Monedas usadas</p><p className="mt-1 text-2xl font-semibold">{Object.keys(summary.originalTotalsByCurrency).length || 1}</p></div></ObsidianCard>
+        <ObsidianCard className="p-5"><div className="relative z-10"><CalendarDays className="size-5 text-[#b8babc]" /><p className="mt-7 text-sm text-[#8c8e91]">Monedas usadas</p><p className="mt-1 text-2xl font-semibold">{Object.keys(summary.originalTotalsByCurrency).length}</p></div></ObsidianCard>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

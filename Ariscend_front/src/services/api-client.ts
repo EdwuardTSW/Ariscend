@@ -10,13 +10,45 @@ export class ApiError extends Error {
   }
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+let csrfToken: string | null = null;
+let csrfRequest: Promise<string> | null = null;
+
+export function clearCsrfToken() {
+  csrfToken = null;
+}
+
+async function getCsrfToken() {
+  if (csrfToken) return csrfToken;
+  if (!csrfRequest) {
+    csrfRequest = request<{ token: string }>("/api/auth/csrf", {}, true)
+      .then(({ token }) => {
+        csrfToken = token;
+        return token;
+      })
+      .finally(() => {
+        csrfRequest = null;
+      });
+  }
+  return csrfRequest;
+}
+
 export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  return request<T>(path, init, false);
+}
+
+async function request<T>(path: string, init: RequestInit, skipCsrf: boolean): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+
+  const method = (init.method ?? "GET").toUpperCase();
+  if (!skipCsrf && !SAFE_METHODS.has(method)) {
+    headers.set("X-XSRF-TOKEN", await getCsrfToken());
   }
 
   const controller = new AbortController();
@@ -28,6 +60,7 @@ export async function apiRequest<T>(
   try {
     response = await fetch(`/backend${path}`, {
       ...init,
+      credentials: "same-origin",
       headers,
       signal: controller.signal,
     });
@@ -43,12 +76,17 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    let message = response.status >= 500
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("ariscend:unauthorized"));
+    }
+    let message = response.status === 401
+      ? "Tu sesión terminó. Inicia sesión nuevamente."
+      : response.status >= 500
       ? "El servidor no pudo completar la solicitud. Intenta nuevamente."
       : "No se pudo completar la operación.";
     try {
       const body = (await response.json()) as ApiErrorBody;
-      if (body.message && response.status < 500) message = body.message;
+      if (body.message && response.status < 500 && response.status !== 401) message = body.message;
     } catch {
       // Keep the fallback when the server did not return JSON.
     }

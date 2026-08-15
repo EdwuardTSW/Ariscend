@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Settings, UserRound } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useSelectedUser } from "@/contexts/selected-user-context";
 
 export function AppHeader() {
@@ -17,9 +17,6 @@ export function AppHeader() {
           <span className="hidden text-sm text-[#a9abad] sm:inline">{selectedUser?.name}</span>
           <Link href="/ajustes" className="focus-ring flex size-11 items-center justify-center rounded-full text-[#a9abad] transition hover:bg-white/[0.06] hover:text-white" aria-label="Ajustes">
             <Settings className="size-5" />
-          </Link>
-          <Link href="/seleccionar-usuario" className="focus-ring flex size-11 items-center justify-center rounded-full text-[#a9abad] transition hover:bg-white/[0.06] hover:text-white" aria-label="Cambiar usuario">
-            <UserRound className="size-5" />
           </Link>
         </div>
       </div>

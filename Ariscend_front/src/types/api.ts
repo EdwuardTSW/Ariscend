@@ -4,6 +4,20 @@ export interface User {
   email: string;
 }
 
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface RegisterInput extends LoginInput {
+  name: string;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface Habit {
   id: number;
   name: string;

@@ -14,7 +14,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !selectedUser) {
-      router.replace(`/seleccionar-usuario?next=${encodeURIComponent(pathname)}`);
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
   }, [loading, pathname, router, selectedUser]);
 
