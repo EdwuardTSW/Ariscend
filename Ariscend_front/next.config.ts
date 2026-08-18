@@ -1,10 +1,5 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_URL
-  ?? (process.env.NODE_ENV === "production"
-    ? "https://ariscend-api.onrender.com"
-    : "http://localhost:8080");
-
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
@@ -18,14 +13,6 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
-      },
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/backend/:path*",
-        destination: `${backendUrl}/:path*`,
       },
     ];
   },
