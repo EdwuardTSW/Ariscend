@@ -59,6 +59,7 @@ test("registration, login, navigation, and task CRUD", async ({ page }) => {
     name: `Marcar ${taskTitle} como pendiente`,
     exact: true,
   })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Archivados/ })).toBeVisible();
 
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("confirm");

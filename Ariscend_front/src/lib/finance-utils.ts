@@ -25,3 +25,15 @@ export const inputClass =
   "focus-ring h-11 w-full rounded-xl border border-white/10 bg-black px-3.5 text-sm text-white placeholder:text-white/25";
 
 export const labelClass = "block text-sm text-[#a9abad]";
+
+export const currencyOptions = [
+  { code: "MXN", label: "Peso mexicano" },
+  { code: "USD", label: "Dólar estadounidense" },
+  { code: "EUR", label: "Euro" },
+  { code: "CAD", label: "Dólar canadiense" },
+  { code: "GBP", label: "Libra esterlina" },
+  { code: "COP", label: "Peso colombiano" },
+  { code: "ARS", label: "Peso argentino" },
+  { code: "CLP", label: "Peso chileno" },
+  { code: "PEN", label: "Sol peruano" },
+] as const;

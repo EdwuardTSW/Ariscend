@@ -104,6 +104,25 @@ a {
   animation: enter 220ms ease-out both;
 }
 
+@keyframes check-pop {
+  0% { transform: scale(0.45) rotate(-18deg); opacity: 0; }
+  65% { transform: scale(1.18) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes celebration-in {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.92); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes flame-pulse {
+  50% { transform: translateY(-3px) scale(1.08); }
+}
+
+.animate-check-pop { animation: check-pop 380ms cubic-bezier(.2,.9,.2,1.2) both; }
+.celebration-panel { animation: celebration-in 320ms cubic-bezier(.2,.8,.2,1) both; }
+.celebration-flame { animation: flame-pulse 1.4s ease-in-out infinite; }
+
 @media (max-width: 767px) {
   .glass-panel {
     background: rgba(18, 18, 18, 0.96);

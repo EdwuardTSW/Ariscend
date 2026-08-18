@@ -9,81 +9,33 @@ import { PageLoading } from "@/components/feedback/page-loading";
 import { Button } from "@/components/ui/button";
 import { ObsidianCard } from "@/components/ui/obsidian-card";
 import { useSelectedUser } from "@/contexts/selected-user-context";
-import { calculateStreak, calculateWeeklyConsistency, type HabitHistory } from "@/lib/dashboard-metrics";
-import { habitsApi } from "@/services/habits-api";
+import { useHabitProgress } from "@/contexts/habit-progress-context";
 import { notesApi } from "@/services/notes-api";
 import type { Habit } from "@/types/api";
 
 export function Dashboard() {
   const { selectedUser } = useSelectedUser();
+  const { habits, loading, error, streak, consistency, refresh, completeHabit } = useHabitProgress();
   const router = useRouter();
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [histories, setHistories] = useState<HabitHistory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [creatingNote, setCreatingNote] = useState(false);
   const [completingId, setCompletingId] = useState<number | null>(null);
-
-  async function load() {
-    if (!selectedUser) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [activeHabits, completions] = await Promise.all([
-        habitsApi.list(selectedUser.id),
-        habitsApi.allCompletions(selectedUser.id),
-      ]);
-      setHabits(activeHabits);
-      setHistories(
-        activeHabits.map((habit) => ({
-          habit,
-          completions: completions.filter((completion) => completion.habitId === habit.id),
-        })),
-      );
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "No se pudo cargar tu resumen.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [greeting, setGreeting] = useState("Hola");
 
   useEffect(() => {
-    if (!selectedUser) return;
-    let active = true;
-    const userId = selectedUser.id;
-    Promise.all([habitsApi.list(userId), habitsApi.allCompletions(userId)])
-      .then(([activeHabits, completions]) => {
-        if (!active) return;
-        setHabits(activeHabits);
-        setHistories(
-          activeHabits.map((habit) => ({
-            habit,
-            completions: completions.filter((completion) => completion.habitId === habit.id),
-          })),
-        );
-      })
-      .catch((requestError) => {
-        if (active) setError(requestError instanceof Error ? requestError.message : "No se pudo cargar tu resumen.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, [selectedUser]);
+    function updateGreeting() {
+      const hour = new Date().getHours();
+      setGreeting(hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches");
+    }
+    updateGreeting();
+    const timer = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  async function completeHabit(habit: Habit) {
+  async function handleCompleteHabit(habit: Habit) {
     if (!selectedUser || habit.completedToday) return;
     setCompletingId(habit.id);
     try {
-      const completion = await habitsApi.complete(selectedUser.id, habit.id);
-      setHabits((current) =>
-        current.map((item) => (item.id === habit.id ? { ...item, completedToday: true } : item)),
-      );
-      setHistories((current) => current.map((history) =>
-        history.habit.id === habit.id
-          ? { ...history, habit: { ...history.habit, completedToday: true }, completions: [completion, ...history.completions] }
-          : history,
-      ));
+      await completeHabit(habit);
       toast.success(`${habit.name} completado.`);
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "No se pudo completar el hábito.");
@@ -110,7 +62,7 @@ export function Dashboard() {
     return (
       <ObsidianCard className="flex min-h-64 flex-col items-center justify-center gap-5 p-8 text-center">
         <p className="max-w-md text-[#c8c8ca]">{error}</p>
-        <Button variant="secondary" onClick={() => void load()}><RefreshCw className="size-4" /> Reintentar</Button>
+        <Button variant="secondary" onClick={() => void refresh()}><RefreshCw className="size-4" /> Reintentar</Button>
       </ObsidianCard>
     );
   }
@@ -118,14 +70,13 @@ export function Dashboard() {
   const completed = habits.filter((habit) => habit.completedToday).length;
   const pending = habits.length - completed;
   const progress = habits.length === 0 ? 0 : Math.round((completed / habits.length) * 100);
-  const streak = calculateStreak(histories);
-  const consistency = calculateWeeklyConsistency(histories);
+  const firstName = selectedUser?.name.trim().split(/\s+/)[0] ?? "";
 
   return (
     <div>
       <section className="animate-enter mb-7 flex items-end justify-between gap-4 md:mb-8">
         <div>
-          <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">¡Buenos días, {selectedUser?.name.split(" ")[0]}!</h1>
+          <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">¡{greeting}, {firstName}!</h1>
           <p className="mt-2 text-[#a9abad] md:text-lg">Resumen de tu progreso general y acciones importantes.</p>
         </div>
         <Button onClick={() => void createQuickNote()} disabled={creatingNote} className="hidden md:inline-flex">
@@ -189,13 +140,13 @@ export function Dashboard() {
               <button
                 key={habit.id}
                 style={{ animationDelay: `${index * 60}ms` }}
-                onClick={() => void completeHabit(habit)}
+                 onClick={() => void handleCompleteHabit(habit)}
                 disabled={habit.completedToday || completingId === habit.id}
-                className="obsidian-card focus-ring group flex min-h-24 items-center justify-between rounded-2xl p-5 text-left transition hover:bg-[#181818] disabled:opacity-70"
+                className={`obsidian-card focus-ring group flex min-h-24 items-center justify-between rounded-2xl p-5 text-left transition-all duration-300 ${habit.completedToday ? "border-white/10 bg-[#080808] text-[#85878a]" : "hover:bg-[#181818]"}`}
               >
-                <span className="relative z-10 font-semibold">{habit.name}</span>
+                <span className="relative z-10 flex min-w-0 items-center gap-3"><span className="text-xl">{habit.icon || "✦"}</span><span className={habit.completedToday ? "truncate line-through" : "truncate font-semibold"}>{habit.name}</span></span>
                 <span className={`relative z-10 flex size-9 items-center justify-center rounded-full border transition ${habit.completedToday ? "border-white bg-white text-black" : "border-white/15 text-[#8c8e91] group-hover:border-white group-hover:text-white"}`}>
-                  <Check className="size-4" />
+                  <Check className={`size-4 ${habit.completedToday ? "animate-check-pop" : ""}`} />
                 </span>
               </button>
             ))}

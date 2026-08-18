@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { KeyRound, LogOut, UserRound } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { KeyRound, LogOut, UserRound, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ObsidianCard } from "@/components/ui/obsidian-card";
 import { useSelectedUser } from "@/contexts/selected-user-context";
 import { useAuth } from "@/contexts/auth-context";
 import { authApi } from "@/services/auth-api";
+import { financeApi } from "@/services/finance-api";
+import { currencyOptions } from "@/lib/finance-utils";
+import type { FinanceSettings } from "@/types/api";
 
 const passwordInputClass = "focus-ring mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/70 px-4 text-white placeholder:text-white/25";
 
@@ -19,6 +22,24 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [financeSettings, setFinanceSettings] = useState<FinanceSettings | null>(null);
+  const [baseCurrency, setBaseCurrency] = useState("");
+  const [savingCurrency, setSavingCurrency] = useState(false);
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    let active = true;
+    financeApi.settings(selectedUser.id)
+      .then((settings) => {
+        if (!active) return;
+        setFinanceSettings(settings);
+        setBaseCurrency(settings.baseCurrency);
+      })
+      .catch((requestError) => {
+        if (active) toast.error(requestError instanceof Error ? requestError.message : "No se cargó la configuración financiera.");
+      });
+    return () => { active = false; };
+  }, [selectedUser]);
 
   async function signOut() {
     setLoggingOut(true);
@@ -58,6 +79,26 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveCurrency(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedUser || !financeSettings) return;
+    setSavingCurrency(true);
+    try {
+      const updated = await financeApi.updateSettings(selectedUser.id, {
+        baseCurrency,
+        paymentAlertDays: financeSettings.paymentAlertDays,
+      });
+      setFinanceSettings(updated);
+      setBaseCurrency(updated.baseCurrency);
+      toast.success("Moneda predeterminada actualizada.");
+    } catch (requestError) {
+      setBaseCurrency(financeSettings.baseCurrency);
+      toast.error(requestError instanceof Error ? requestError.message : "No se pudo actualizar la moneda.");
+    } finally {
+      setSavingCurrency(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-8">
@@ -73,6 +114,25 @@ export default function SettingsPage() {
               <p className="truncate text-lg font-semibold">{selectedUser?.name}</p>
               <p className="truncate text-sm text-[#8c8e91]">{selectedUser?.email}</p>
             </div>
+          </div>
+        </ObsidianCard>
+
+        <ObsidianCard className="p-6">
+          <div className="relative z-10">
+            <div className="flex items-start gap-4">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-white/10"><WalletCards className="size-5" /></span>
+              <div><h2 className="text-lg font-semibold">Moneda predeterminada</h2><p className="mt-1 text-sm leading-6 text-[#8c8e91]">Se usa para convertir y resumir todos tus movimientos.</p></div>
+            </div>
+            <form onSubmit={saveCurrency} className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="flex-1 text-sm font-medium text-[#c7c8ca]">Moneda base
+                <select aria-label="Moneda base" disabled={!financeSettings || savingCurrency} value={baseCurrency} onChange={(event) => setBaseCurrency(event.target.value)} className={`${passwordInputClass} disabled:opacity-50`}>
+                  {!currencyOptions.some((currency) => currency.code === baseCurrency) && baseCurrency && <option value={baseCurrency}>{baseCurrency}</option>}
+                  {currencyOptions.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} · {currency.label}</option>)}
+                </select>
+              </label>
+              <Button type="submit" disabled={!financeSettings || savingCurrency || baseCurrency === financeSettings.baseCurrency}>{savingCurrency ? "Guardando..." : "Guardar"}</Button>
+            </form>
+            <p className="mt-4 text-xs leading-5 text-[#77797c]">Elige la moneda antes de registrar movimientos. Para proteger tus cálculos históricos, no puede cambiarse después del primer ingreso o gasto.</p>
           </div>
         </ObsidianCard>
 

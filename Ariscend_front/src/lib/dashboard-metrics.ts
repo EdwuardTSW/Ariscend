@@ -13,8 +13,12 @@ function localDateKey(date: Date) {
 }
 
 export function calculateStreak(histories: HabitHistory[]) {
+  if (histories.length === 0) return 0;
+  const completionDates = histories.map(({ completions }) =>
+    new Set(completions.map((item) => item.completedDate)),
+  );
   const completedDates = new Set(
-    histories.flatMap(({ completions }) => completions.map((item) => item.completedDate)),
+    [...completionDates[0]].filter((date) => completionDates.every((dates) => dates.has(date))),
   );
   const cursor = new Date();
   if (!completedDates.has(localDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);

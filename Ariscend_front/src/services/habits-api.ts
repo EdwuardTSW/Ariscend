@@ -23,6 +23,7 @@ export const habitsApi = {
       category?: string;
       frequency?: "DAILY" | "WEEKLY";
       targetDaysPerWeek?: number;
+      icon?: string;
     },
   ) =>
     apiRequest<Habit>(`/api/users/${userId}/habits`, {
