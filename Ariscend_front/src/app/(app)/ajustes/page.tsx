@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { KeyRound, LogOut, UserRound } from "lucide-react";
 import { toast } from "sonner";
@@ -15,7 +14,6 @@ const passwordInputClass = "focus-ring mt-2 h-12 w-full rounded-xl border border
 export default function SettingsPage() {
   const { selectedUser } = useSelectedUser();
   const { logout } = useAuth();
-  const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -26,10 +24,10 @@ export default function SettingsPage() {
     setLoggingOut(true);
     try {
       await logout();
-      router.replace("/login");
+      window.location.replace("/login");
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "No se pudo cerrar la sesión.");
-      router.replace("/login");
+      window.location.replace("/login");
     } finally {
       setLoggingOut(false);
     }

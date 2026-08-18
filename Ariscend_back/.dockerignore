@@ -1,0 +1,9 @@
+.gradle
+build
+src/test
+*.log
+*.iml
+.idea
+.git
+.gitignore
+README.md

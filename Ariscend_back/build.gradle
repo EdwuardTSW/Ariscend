@@ -17,6 +17,10 @@ repositories {
 	mavenCentral()
 }
 
+configurations {
+	e2eRuntimeOnly
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
@@ -35,8 +39,17 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	e2eRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.register('bootE2e', JavaExec) {
+	group = 'verification'
+	description = 'Starts the application with an isolated H2 database for browser tests.'
+	classpath = sourceSets.main.runtimeClasspath + configurations.e2eRuntimeOnly
+	mainClass = 'com.ariscend.backend.AriscendBackendApplication'
+	args '--spring.profiles.active=e2e', '--server.port=18080'
 }

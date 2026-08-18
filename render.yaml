@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: ariscend-api
+    runtime: docker
+    plan: free
+    region: ohio
+    dockerfilePath: ./Ariscend_back/Dockerfile
+    dockerContext: ./Ariscend_back
+    healthCheckPath: /api/auth/providers
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod,oauth
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

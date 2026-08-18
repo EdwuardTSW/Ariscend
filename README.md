@@ -46,8 +46,8 @@ Los recursos personales nuevos usan rutas anidadas por usuario:
 /api/users/{userId}/finance
 ```
 
-El `userId` proporciona aislamiento lógico mientras no exista autenticación. La
-identidad real se incorporará posteriormente con Spring Security y JWT.
+Spring Security protege los recursos con sesiones HTTP, CSRF y validación de
+propiedad para que cada cuenta sólo pueda acceder a sus propios datos.
 
 ### Verificación
 
@@ -79,4 +79,33 @@ Verificación del frontend:
 npm run lint
 npm run typecheck
 npm run build
+npm run test:e2e
+```
+
+## Despliegue gratuito
+
+La arquitectura prevista para la beta utiliza Cloudflare para el frontend,
+Render para el backend y Neon para PostgreSQL.
+
+El backend incluye una imagen Docker reproducible en `Ariscend_back/Dockerfile`
+y un Blueprint de Render en `render.yaml`. Render debe recibir estas variables
+como secretos; ninguna debe guardarse en Git:
+
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+APP_BASE_URL
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+```
+
+`APP_BASE_URL` debe ser el origen HTTPS público del frontend, sin una barra al
+final. Render proporciona automáticamente `PORT` y el contenedor lo utiliza al
+arrancar.
+
+Para construir la imagen manualmente cuando Docker esté instalado:
+
+```powershell
+docker build -t ariscend-backend ./Ariscend_back
 ```
