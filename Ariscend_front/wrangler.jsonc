@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "ariscend",
+  "name": "app",
   "compatibility_date": "2026-08-17",
   "compatibility_flags": [
     "nodejs_compat",
