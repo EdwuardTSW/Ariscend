@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "build:cloudflare": "opennextjs-cloudflare build",
+    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.23",
@@ -27,6 +30,7 @@
     "tailwind-merge": "3.6.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "1.20.2",
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.2.0",
@@ -36,6 +40,7 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "4.3.3",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "wrangler": "4.123.0"
   }
 }

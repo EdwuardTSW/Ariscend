@@ -52,7 +52,8 @@ async function request<T>(path: string, init: RequestInit, skipCsrf: boolean): P
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 12_000);
+  // Render Free can take close to a minute to wake after an idle period.
+  const timeout = window.setTimeout(() => controller.abort(), 75_000);
   const abortFromCaller = () => controller.abort();
   init.signal?.addEventListener("abort", abortFromCaller, { once: true });
 

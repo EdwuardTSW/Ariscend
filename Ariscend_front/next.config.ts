@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
+const backendUrl = process.env.BACKEND_URL
+  ?? (process.env.NODE_ENV === "production"
+    ? "https://ariscend-api.onrender.com"
+    : "http://localhost:8080");
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -29,3 +32,6 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();
