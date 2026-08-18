@@ -67,7 +67,7 @@ export function FinanceOverview() {
         </ObsidianCard>
         <ObsidianCard className="p-6 md:p-8">
           <div className="relative z-10 flex h-full flex-col">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#85878a]">Flujo del periodo</p><h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Ingresos y gastos, juntos</h3></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#85878a]">Flujo del periodo</p><h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Ingresos y gastos</h3></div>
             <div className="mt-7 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 md:p-5"><ArrowUpRight className="size-5 text-[#b8babc]" /><p className="mt-5 text-sm text-[#8c8e91]">Ingresos</p><p className="mt-1 break-words text-xl font-semibold md:text-2xl">{formatMoney(summary.totalIncome, summary.baseCurrency)}</p></div>
               <div className="rounded-2xl border border-white/[0.08] bg-black/30 p-4 md:p-5"><ArrowDownRight className="size-5 text-[#b8babc]" /><p className="mt-5 text-sm text-[#8c8e91]">Gastos</p><p className="mt-1 break-words text-xl font-semibold md:text-2xl">{formatMoney(summary.totalExpenses, summary.baseCurrency)}</p></div>
