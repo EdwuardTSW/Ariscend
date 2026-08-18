@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 test("habit celebration, streak, reusable category, and mobile quick note", async ({ page }) => {
   const id = randomUUID();
   const email = `habits-${id}@example.test`;
+  await page.setViewportSize({ width: 390, height: 844 });
 
   await page.goto("/habitos");
   const accessMode = page.getByRole("group", { name: "Tipo de acceso" });
@@ -35,10 +36,13 @@ test("habit celebration, streak, reusable category, and mobile quick note", asyn
   const celebration = page.getByRole("dialog");
   await expect(celebration.getByRole("heading", { name: "Misión cumplida." })).toBeVisible();
   await expect(celebration.getByText(/disciplina ya está hablando por ti/i)).toBeVisible();
+  const celebrationBox = await celebration.boundingBox();
+  expect(celebrationBox).not.toBeNull();
+  expect(celebrationBox!.x).toBeGreaterThanOrEqual(0);
+  expect(celebrationBox!.x + celebrationBox!.width).toBeLessThanOrEqual(390);
   await celebration.getByRole("button", { name: "Cerrar celebración" }).click();
   await expect(page.getByRole("link", { name: "Racha activa de 1 día" })).toBeVisible();
 
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Crear nueva nota" }).click();
   await expect(page).toHaveURL(/\/notas\/\d+$/);
   await expect(page.getByLabel("Título de la nota")).toBeFocused();

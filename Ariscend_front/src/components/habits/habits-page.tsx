@@ -43,8 +43,8 @@ export function HabitsPage() {
   async function complete(habit: Habit) {
     if (!selectedUser || habit.completedToday) return;
     try {
-      await completeHabit(habit);
-      toast.success("Hábito completado.");
+      const completedDay = await completeHabit(habit);
+      if (!completedDay) toast.success("Hábito completado.");
     } catch (error) { toast.error(error instanceof Error ? error.message : "No se pudo completar."); }
   }
 

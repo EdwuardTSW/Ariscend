@@ -16,7 +16,7 @@ interface HabitProgressValue {
   streak: number;
   consistency: number;
   refresh: () => Promise<void>;
-  completeHabit: (habit: Habit) => Promise<void>;
+  completeHabit: (habit: Habit) => Promise<boolean>;
 }
 
 const HabitProgressContext = createContext<HabitProgressValue | null>(null);
@@ -72,7 +72,7 @@ export function HabitProgressProvider({ children }: { children: React.ReactNode 
   }, [selectedUser]);
 
   async function completeHabit(habit: Habit) {
-    if (!selectedUser || habit.completedToday) return;
+    if (!selectedUser || habit.completedToday) return false;
     const completion = await habitsApi.complete(selectedUser.id, habit.id);
     const completesDay = habits.length > 0 && habits.every((item) => item.id === habit.id || item.completedToday);
     setHabits((current) => current.map((item) => item.id === habit.id ? { ...item, completedToday: true } : item));
@@ -84,6 +84,7 @@ export function HabitProgressProvider({ children }: { children: React.ReactNode 
         }
       : history));
     if (completesDay) setCelebrating(true);
+    return completesDay;
   }
 
   const value: HabitProgressValue = {
@@ -103,7 +104,7 @@ export function HabitProgressProvider({ children }: { children: React.ReactNode 
       <Dialog.Root open={celebrating} onOpenChange={setCelebrating}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-sm" />
-          <Dialog.Content className="celebration-panel fixed left-1/2 top-1/2 z-[80] w-[calc(100%-32px)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[2rem] border border-white/15 bg-[#111111] p-7 text-center outline-none md:p-9">
+          <Dialog.Content className="celebration-panel fixed inset-0 z-[80] m-auto h-fit max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[2rem] border border-white/15 bg-[#111111] p-7 text-center outline-none md:p-9">
             <Dialog.Close aria-label="Cerrar celebración" className="focus-ring absolute right-4 top-4 flex size-11 items-center justify-center rounded-full text-[#8c8e91] transition hover:bg-white/[0.07] hover:text-white"><X className="size-5" /></Dialog.Close>
             <div className="mx-auto flex size-20 items-center justify-center rounded-full border border-white/15 bg-white text-black">
               <Flame className="celebration-flame size-9" fill="currentColor" />

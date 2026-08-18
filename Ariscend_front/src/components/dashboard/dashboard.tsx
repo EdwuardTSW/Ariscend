@@ -35,8 +35,8 @@ export function Dashboard() {
     if (!selectedUser || habit.completedToday) return;
     setCompletingId(habit.id);
     try {
-      await completeHabit(habit);
-      toast.success(`${habit.name} completado.`);
+      const completedDay = await completeHabit(habit);
+      if (!completedDay) toast.success(`${habit.name} completado.`);
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "No se pudo completar el hábito.");
     } finally {
